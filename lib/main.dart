@@ -1,74 +1,62 @@
-import 'dart:ffi';
-
-import 'package:amazon_app/models/cart.dart';
-import 'package:amazon_app/pages/ProductDetails.dart';
-import 'package:amazon_app/pages/ProductDetailsScreen1.dart';
-import 'package:amazon_app/pages/homepage.dart';
-import 'package:amazon_app/pages/navigator.dart';
-import 'package:amazon_app/pages/productlist.dart';
-import 'package:amazon_app/pages/signup.dart';
-import 'package:amazon_app/services/Auth_Services.dart';
-import 'package:amazon_app/widget/productscontainer.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-import 'package:onboarding/onboarding.dart';
+import 'package:amazon_app/layout/home_provider.dart';
+import 'package:amazon_app/layout/home_screen.dart';
+import 'package:amazon_app/modules/splash/splash_screen.dart';
+import 'package:amazon_app/shared/network/local/cashe_helper.dart';
+import 'package:amazon_app/shared/network/remote/dio_helper.dart';
+import 'package:amazon_app/shared/styles/themes.dart';
+import 'package:amazon_app/utils/translation.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
+import 'package:sizer/sizer.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_phoenix/flutter_phoenix.dart';
+
 void main() async {
-  
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-  );
-  
-  runApp( MyApp());
+  // await di.init();
+  await SharedHelper.init();
+  await Firebase.initializeApp();
+  DioHelper.Init();
+  if (SharedHelper.get(key: 'theme') == null) {
+    SharedHelper.save(value: 'Dark Theme', key: 'theme');
+  }
+  if (SharedHelper.get(key: 'lang') == null) {
+    SharedHelper.save(value: 'en', key: 'lang');
+  }
+  runApp(Phoenix(child: const MyApp()));
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
   @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  Widget currentPage = SignUP();
-  AuthClass authClass = AuthClass();
-  @override
-  void initState() {
-    super.initState();
-    checkLogin();
-  }
-
-  void checkLogin() async {
-    String? token = await authClass.getToken();
-    if (token != null) {
-      setState(() {
-        currentPage = NavigatorScreen();
-      });
-    }
-  }
-
   Widget build(BuildContext context) {
-     return ChangeNotifierProvider(create: (context) {
-        return Cart();
-      },
-      
-      
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        debugShowMaterialGrid: false,
-        title: 'smart home',
-        home: SignUP(),
+    return Sizer(
+      builder: (a, b, c) => ChangeNotifierProvider(
+        create: (ctx) => HomeProvider()..getCategories(),
+        child: GetMaterialApp(
+          translations: myTranslation(),
+          locale: Locale(SharedHelper.get(key: 'lang')),
+          fallbackLocale: Locale(SharedHelper.get(key: 'lang')),
+          debugShowCheckedModeBanner: false,
+          darkTheme: darkTheme(),
+          theme: lightTheme(),
+          themeMode: SharedHelper.get(key: 'theme') == 'Light Theme'
+              ? ThemeMode.light
+              : ThemeMode.dark,
+          home: startScreen(),
+        ),
       ),
-    
     );
   }
 }
-//     return MaterialApp(
-//       debugShowCheckedModeBanner: false,
-      
-//       // home: NavigatorScreen(),
-//       home: NavigatorScreen(),
-//     );
-//   }
-// }
+
+//
+Widget startScreen() {
+  bool? signIn = SharedHelper.get(key: 'signIn');
+  if (signIn != null && signIn == true) {
+    return SplashScreen('home');
+  }
+  return SplashScreen('logIn');
+}
